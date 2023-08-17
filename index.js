@@ -25,27 +25,42 @@ function main() {
   const p1 = pix.open('img/s-030.ppm');
   console.log('s-030.ppm', p1);
 
-  const p2 = pix.thresh(p1, 128);
+  const p2 = pix.thresh(p1, 150);
   pix.save(p2, 'img/s-030-01-thresh.png', f.png);
-
-  const p3 = pix.morph(p2, 'c150.5');
-  pix.save(p3, 'img/s-030-02-morph.png', f.png);
-
-  const b1 = pix.connComp(p3);
-  console.log(b1.length, b1.ptr, b1[0]);
-  const b2 = box.aget(b1, 2);
-  console.log(b2);
-  box.destroy(b2);
-  console.log(b2);
-
-  box.destroy(b1);
-  console.log(b1.length, b1.ptr, b1[0]);
-
   pix.destroy(p1);
-  console.log('s-030.ppm', p1);
-  pix.destroy(p2);
-  pix.destroy(p3);
-  console.log('end');
+
+  const pline = pix.morph(p2, 'c150.5');
+  pix.save(pline, 'img/s-030-02-morph-line.png', f.png);
+
+  const bline = pix.connComp(pline);
+  pix.destroy(pline);
+
+  const pchar = pix.morph(p2, 'c1.10');
+  pix.save(pchar, 'img/s-030-03-morph-char.png', f.png);
+
+  const bchar = pix.connComp(pchar);
+  pix.destroy(pchar);
+
+  console.log('mod lines');
+  for (const l of bline) {
+    bchar.filter(x => {
+      const cy = x.y + x.h / 2;
+      return l.y < cy && cy < l.y + l.h;
+    }).forEach(x => {
+      x.y = l.y;
+      x.h = l.h;
+    });
+  }
+  console.log('set geometry');
+  box.aSetGeometry(bchar);
+  console.log('pix render');
+
+  const p4 = pix.copy(p2);
+  box.pixRender(p4, bchar);
+  console.log('save');
+  // box.pixRender(p4, bline);
+  pix.save(p4, 'img/s-030-04-boxa.png', f.png);
+  console.log('done');
 }
 main();
 

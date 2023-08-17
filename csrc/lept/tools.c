@@ -19,7 +19,7 @@ static napi_status _napi_nset_named_ptr(napi_env env, napi_value obj,
   napi_status status;
   napi_value nvalue;
   status = napi_create_external(env, value, NULL, NULL, &nvalue);
-  if (cb) { 
+  if (cb) {
     // ref could be created automatically by create_external, but this way
     // we can delete the finalize ref when destroying.
     napi_ref finref;
@@ -79,10 +79,36 @@ static int32_t napi_cget_int32(napi_env env, napi_value nval) {
   return val;
 }
 
+static int32_t napi_cget_key_int32(
+    napi_env env, napi_value obj, const char *key) {
+  napi_value kval;
+  napi_get_named_property(env, obj, key, &kval);
+  return napi_cget_int32(env, kval);
+}
+
 static napi_value napi_nget_int32(napi_env env, int32_t value) {
   napi_value rv;
   napi_create_int32(env, value, &rv);
   return rv;
+}
+
+static napi_value napi_nget_uint32(napi_env env, uint32_t value) {
+  napi_value rv;
+  napi_create_uint32(env, value, &rv);
+  return rv;
+}
+
+static uint32_t napi_cget_uint32(napi_env env, napi_value nval) {
+  uint32_t val;
+  napi_get_value_uint32(env, nval, &val);
+  return val;
+}
+
+static uint32_t napi_cget_key_uint32(
+    napi_env env, napi_value obj, const char *key) {
+  napi_value kval;
+  napi_get_named_property(env, obj, key, &kval);
+  return napi_cget_uint32(env, kval);
 }
 
 static bool napi_cget_is_array(napi_env env, napi_value nval) {
@@ -91,16 +117,36 @@ static bool napi_cget_is_array(napi_env env, napi_value nval) {
   return rv;
 }
 
+static uint32_t napi_cget_array_length(napi_env env, napi_value nval) {
+  uint32_t len;
+  napi_get_array_length(env, nval, &len);
+  return len;
+}
+
+static napi_value napi_cget_array_item(napi_env env, napi_value nval, uint32_t i) {
+  napi_value item;
+  napi_get_property(env, nval, napi_nget_uint32(env, i), &item);
+  return item;
+}
+
+static bool napi_cget_is_truthy(napi_env env, napi_value nval) {
+  bool rv;
+  napi_value bval;
+  napi_coerce_to_bool(env, nval, &bval);
+  napi_get_value_bool(env, bval, &rv);
+  return rv;
+}
+
 static bool napi_cdel_ptr(napi_env env, napi_value obj) {
   bool rv;
   napi_value pkey, rkey;
-  
+
   // reference, cleans up the finalize
   napi_ref ref = napi_cget_ptrref(env, obj);
   napi_delete_reference(env, ref);
   napi_create_string_latin1(env, ptrrefkey, 3, &rkey);
   napi_delete_property(env, obj, rkey, &rv);
-  
+
   // then remove the ptr
   napi_create_string_latin1(env, ptrkey, 3, &pkey);
   napi_has_property(env, obj, pkey, &rv);

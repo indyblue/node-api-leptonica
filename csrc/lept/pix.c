@@ -51,7 +51,9 @@ static void napi_pixa_array_existing(
   int cnt = pixaGetCount(pixa);
   for (int i = 0; i < cnt; i++) {
     PIX *pix = pixaGetPix(pixa, i, L_CLONE);
-    napi_set_element(env, obj, i, napi_pix_object_nop(env, pix));
+    napi_value iobj = napi_pix_object_nop(env, pix);
+    napi_nset_named_uint32(env, iobj, "i", i);
+    napi_set_element(env, obj, i, iobj);
     pixDestroy(&pix);
   }
   napi_nset_ptr(env, obj, pixa, napi_pixa_finalize);
@@ -74,6 +76,16 @@ static napi_value napi_pix_open(napi_env env, napi_callback_info info) {
   PIX *pix = pixRead(name);
   free(name);
   return napi_pix_object(env, pix);
+}
+
+static napi_value napi_pix_copy(napi_env env, napi_callback_info info) {
+  size_t argc = 1;
+  napi_value args[argc];
+  napi_get_cb_info(env, info, &argc, args, NULL, NULL);
+
+  PIX *pix1 = napi_cget_ptr(env, args[0]);
+  PIX *pix2 = pixCopy(NULL, pix1);
+  return napi_pix_object(env, pix2);
 }
 
 static napi_value napi_pix_destroy(napi_env env, napi_callback_info info) {
@@ -159,11 +171,12 @@ static napi_value napi_pix_conncomp(napi_env env, napi_callback_info info) {
 
   PIX *pix1 = napi_cget_ptr(env, args[0]);
   l_int32 conn = napi_cget_int32(env, args[2]);
-  if (conn != 4) conn = 8;
+  if (argc < 3 || conn != 4) conn = 8;
   BOXA *boxa;
   if (napi_cget_is_array(env, args[1])) {
     PIXA *pixa;
     boxa = pixConnComp(pix1, &pixa, conn);
+    napi_pixa_array_existing(env, pixa, &args[1]);
   } else {
     boxa = pixConnComp(pix1, NULL, conn);
   }
@@ -214,6 +227,7 @@ static napi_value napi_pix_exports(napi_env env) {
   napi_create_object(env, &obj);
   napi_property_descriptor desc[] = {
       DECLARE_NAPI_METHOD("open", napi_pix_open),
+      DECLARE_NAPI_METHOD("copy", napi_pix_copy),
       DECLARE_NAPI_METHOD("rotate", napi_pix_rotate),
       DECLARE_NAPI_METHOD("thresh", napi_pix_thresh),
       DECLARE_NAPI_METHOD("morph", napi_pix_morph),

@@ -48,13 +48,23 @@ static napi_value napi_box_object(napi_env env, BOX *box) {
   return obj;
 }
 
+static void napi_box_set_geo(napi_env env, napi_value obj, BOX *box) {
+  int32_t x = napi_cget_key_uint32(env, obj, "x");
+  int32_t y = napi_cget_key_uint32(env, obj, "y");
+  int32_t w = napi_cget_key_uint32(env, obj, "w");
+  int32_t h = napi_cget_key_uint32(env, obj, "h");
+  boxSetGeometry(box, x, y, w, h);
+}
+
 static void napi_boxa_array_existing(
     napi_env env, BOXA *boxa, napi_value *arrptr) {
   napi_value obj = *arrptr;
   int cnt = boxaGetCount(boxa);
   for (int i = 0; i < cnt; i++) {
     BOX *box = boxaGetBox(boxa, i, L_CLONE);
-    napi_set_element(env, obj, i, napi_box_object_nop(env, box));
+    napi_value iobj = napi_box_object_nop(env, box);
+    napi_nset_named_uint32(env, iobj, "i", i);
+    napi_set_element(env, obj, i, iobj);
     boxDestroy(&box);
   }
   napi_nset_ptr(env, obj, boxa, napi_boxa_finalize);
@@ -96,12 +106,61 @@ static napi_value napi_boxa_get(napi_env env, napi_callback_info info) {
   return napi_box_object(env, box);
 }
 
+static napi_value napi_boxa_pix_render(napi_env env, napi_callback_info info) {
+  size_t argc = 3;
+  napi_value args[argc];
+  napi_get_cb_info(env, info, &argc, args, NULL, NULL);
+
+  PIX *pix1 = napi_cget_ptr(env, args[0]);
+  BOXA *boxa = napi_cget_ptr(env, args[1]);
+  int32_t width = napi_cget_int32(env, args[2]);
+  if (argc < 3 || !(width > 0)) width = 1;
+  pixRenderBoxa(pix1, boxa, width, L_SET_PIXELS);
+
+  return napi_nget_int32(env, 1);
+}
+
+static napi_value napi_box_set_geometry(napi_env env, napi_callback_info info) {
+  size_t argc = 1;
+  napi_value args[argc];
+  napi_get_cb_info(env, info, &argc, args, NULL, NULL);
+
+  napi_value nbox = args[0];
+  BOX *box = napi_cget_ptr(env, nbox);
+  napi_box_set_geo(env, nbox, box);
+
+  return napi_nget_int32(env, 1);
+}
+
+static napi_value napi_boxa_set_geometry(
+    napi_env env, napi_callback_info info) {
+  size_t argc = 1;
+  napi_value args[argc];
+  napi_get_cb_info(env, info, &argc, args, NULL, NULL);
+
+  napi_value boxarr = args[0];
+  BOXA *boxa = napi_cget_ptr(env, boxarr);
+  uint32_t len = napi_cget_array_length(env, boxarr);
+  for (uint32_t i = 0; i < len; i++) {
+    napi_value item = napi_cget_array_item(env, boxarr, i);
+    uint32_t ii = napi_cget_key_uint32(env, item, "i");
+    BOX *box = boxaGetBox(boxa, ii, L_CLONE);
+    napi_box_set_geo(env, item, box);
+    boxDestroy(&box);
+  }
+
+  return napi_nget_int32(env, 1);
+}
+
 static napi_value napi_box_exports(napi_env env) {
   napi_value obj;
   napi_create_object(env, &obj);
   napi_property_descriptor descr[] = {
       DECLARE_NAPI_METHOD("destroy", napi_box_destroy),
-      DECLARE_NAPI_METHOD("aget", napi_boxa_get)
+      DECLARE_NAPI_METHOD("pixRender", napi_boxa_pix_render),
+      DECLARE_NAPI_METHOD("setGeometry", napi_box_set_geometry),
+      DECLARE_NAPI_METHOD("aSetGeometry", napi_boxa_set_geometry),
+      DECLARE_NAPI_METHOD("aGet", napi_boxa_get)
       // end
   };
   napi_define_properties(env, obj, sizeof(descr) / sizeof(descr[0]), descr);
