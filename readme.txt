@@ -1,3 +1,15 @@
+## setup ramdisk, build, execute
+
+dir=/home/user/www/test/cpp/tmp/lept-node-gyp/img/rd
+sudo mount -t tmpfs -o size=2048M tmpfs $dir
+sudo umount $dir
+
+clear; yarn build
+clear; node index.js
+
+
+## node gyp details
+
 https://nodejs.org/api/addons.html
 
 Usage: node-gyp <command> [options]

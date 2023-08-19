@@ -1,44 +1,32 @@
+const { exec } = require('child_process');
+const { promisify } = require('util');
+const pexec = promisify(exec);
+
 const bind = require('bindings');
 const { pix, box } = bind('lept');
 const f = pix.formats;
 
-/*
-const asdf = bind('asdf');
-console.log(asdf.myArray);
-const x = asdf.hello();
-const y = asdf.add(4, 3);
-asdf.runCallback(() => {
-  console.log('this is my callback');
-});
-console.log(x, y);
-*/
-
-// const pix1 = pix.open('img/mps.jpg');
-// console.log(1, pix1);
-// const pix2 = pix.rotate(pix1, 1);
-// console.log(2, pix2);
-// const pix3 = pix.thresh(pix1, 128);
-// console.log(3, pix3);
-
-// console.log(f);
-function main() {
-  const p1 = pix.open('img/s-030.ppm');
+async function main() {
+  const d = 'img/';
+  const td = d + 'rd/';
+  await pexec(`cp ${d}*.ppm ${td}`);
+  const p1 = pix.open(td + 's-030.ppm');
   console.log('s-030.ppm', p1);
 
-  const p2 = pix.thresh(p1, 150);
-  pix.save(p2, 'img/s-030-01-thresh.png', f.png);
+  const p2 = pix.thresh(p1, 170);
+  pix.save(p2, td + 's-030-01-thresh.png', f.png);
   pix.destroy(p1);
 
   const pline = pix.morph(p2, 'c150.5');
-  pix.save(pline, 'img/s-030-02-morph-line.png', f.png);
+  pix.save(pline, td + 's-030-02-morph-line.png', f.png);
 
   const bline = pix.connComp(pline);
   pix.destroy(pline);
 
-  const pchar = pix.morph(p2, 'c1.10');
-  pix.save(pchar, 'img/s-030-03-morph-char.png', f.png);
+  const pchar = pix.morph(p2, 'c2.10');
+  pix.save(pchar, td + 's-030-03-morph-char.png', f.png);
 
-  const bchar = pix.connComp(pchar);
+  const bchar = pix.connComp(p2);
   pix.destroy(pchar);
 
   console.log('mod lines');
@@ -59,19 +47,21 @@ function main() {
   box.pixRender(p4, bchar);
   console.log('save');
   // box.pixRender(p4, bline);
-  pix.save(p4, 'img/s-030-04-boxa.png', f.png);
+  pix.save(p4, td + 's-030-04-boxa.png', f.png);
   console.log('done');
 }
 main();
 
-// let i = 0;
-// const id = setInterval(() => {
-//   console.log('after a while...');
-//   if (i++ > 10) clearInterval(id);
-// }, 1000);
-
-// lept.pix.destroy(pix);
-// lept.pix.destroy(pix2);
+/*
+const asdf = bind('asdf');
+console.log(asdf.myArray);
+const x = asdf.hello();
+const y = asdf.add(4, 3);
+asdf.runCallback(() => {
+  console.log('this is my callback');
+});
+console.log(x, y);
+*/
 
 /*
 const express = require('express');
